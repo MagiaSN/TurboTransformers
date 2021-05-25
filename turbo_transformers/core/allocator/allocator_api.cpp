@@ -75,9 +75,11 @@ std::string Allocator::get_schema() const { return impl_->schema_; };
  */
 void Allocator::register_schema(const std::string& schema) {
   if ("model-aware" == schema) {
-    impl_->allocators.emplace("model-aware", new ModelAwareAllocator("bert"));
+    // impl_->allocators.emplace("model-aware", new ModelAwareAllocator("bert"));
+    impl_->allocators.emplace("model-aware", std::unique_ptr<BaseAllocator>(new ModelAwareAllocator("bert")));
   } else if ("naive" == schema) {
-    impl_->allocators.emplace("naive", new NaiveAllocator());
+    // impl_->allocators.emplace("naive", new NaiveAllocator());
+    impl_->allocators.emplace("naive", std::unique_ptr<BaseAllocator>(new NaiveAllocator()));
   } else {
     TT_THROW("no schem %s in register_schema", schema.c_str());
   }

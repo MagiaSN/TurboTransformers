@@ -75,7 +75,7 @@ float TestFuncSpeed(Func&& func, int step, const std::string& infor,
   func();
   std::unique_ptr<Timer> timer;
   if (dev == kDLCPU) {
-    timer = std::make_unique<CPUTimer>();
+    timer = std::unique_ptr<CPUTimer>(new CPUTimer());
   } else if (dev == kDLGPU) {
 #ifdef TT_WITH_CUDA
     static auto stream = core::CUDADeviceContext::GetInstance().stream();

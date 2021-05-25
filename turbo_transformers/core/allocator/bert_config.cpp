@@ -90,7 +90,7 @@ void GetBertTensorUsageRecord(
   // sort descend order
   std::sort(
       TensorUsageRecord.begin(), TensorUsageRecord.end(),
-      [](const auto& a, const auto& b) -> bool { return a->size_ > b->size_; });
+      [](const TensorRecordItemPtr& a, const TensorRecordItemPtr& b) -> bool { return a->size_ > b->size_; });
 }
 #undef ADDITEM
 
