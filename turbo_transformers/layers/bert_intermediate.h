@@ -19,9 +19,10 @@
 namespace turbo_transformers {
 namespace layers {
 
-class BertIntermediate {
+template <typename DType>
+class BertIntermediateT {
  public:
-  BertIntermediate(core::Tensor dense_weight, core::Tensor dense_bias)
+  BertIntermediateT(core::Tensor dense_weight, core::Tensor dense_bias)
       : dense_weight_(std::move(dense_weight)),
         dense_bias_(std::move(dense_bias)) {
     EnforceShapeAndType();
@@ -34,6 +35,8 @@ class BertIntermediate {
   core::Tensor dense_weight_;
   core::Tensor dense_bias_;
 };
+
+typedef BertIntermediateT<float> BertIntermediate;
 
 }  // namespace layers
 }  // namespace turbo_transformers

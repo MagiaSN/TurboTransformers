@@ -29,27 +29,29 @@
 namespace turbo_transformers {
 namespace layers {
 
-void BertIntermediate::operator()(const core::Tensor& input_tensor,
+template <typename DType>
+void BertIntermediateT<DType>::operator()(const core::Tensor& input_tensor,
                                   core::Tensor* output_tensor) const {
 #ifdef WITH_PERFTOOLS
   auto& profile_ctx = core::Profiler::GetInstance();
   profile_ctx.start_profile("BertIntermediate", input_tensor.device_type());
 #endif
-  output_tensor->Reshape<float>(
+  output_tensor->Reshape<DType>(
       {input_tensor.shape(0), input_tensor.shape(1), dense_weight_.shape(1)},
       input_tensor.device_type(), input_tensor.device_id(),
       "BertIntermediate/Reshape");
 
   kernels::MatMul(input_tensor, false, dense_weight_, false, 1.0, output_tensor,
                   0.0, "BertIntermediate/MatMul");
-  kernels::AddBiasAct<float, kernels::ActivationType::Gelu>(
+  kernels::AddBiasAct<DType, kernels::ActivationType::Gelu>(
       dense_bias_, output_tensor, "BertIntermediate/AddBiasAct");
 #ifdef WITH_PERFTOOLS
   profile_ctx.end_profile("BertIntermediate", input_tensor.device_type());
 #endif
 }
 
-void BertIntermediate::EnforceShapeAndType() const {
+template <typename DType>
+void BertIntermediateT<DType>::EnforceShapeAndType() const {
   TT_ENFORCE_EQ(dense_weight_.n_dim(), 2, "dense weight must be matrix");
   TT_ENFORCE_EQ(dense_bias_.n_dim(), 1, "dense bias must be vector");
   TT_ENFORCE_EQ(dense_weight_.shape(1), dense_bias_.shape(0),
@@ -65,6 +67,8 @@ void BertIntermediate::EnforceShapeAndType() const {
     LOG_S(3) << os.str();
   }
 }
+
+template class BertIntermediateT<float>;
 
 }  // namespace layers
 }  // namespace turbo_transformers
