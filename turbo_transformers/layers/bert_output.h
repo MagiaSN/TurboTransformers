@@ -19,10 +19,11 @@
 namespace turbo_transformers {
 namespace layers {
 
-class BertOutput {
+template <typename DType>
+class BertOutputT {
  public:
-  BertOutput(core::Tensor dense_weight, core::Tensor dense_bias,
-             core::Tensor layer_norm_weight, core::Tensor layer_norm_bias)
+  BertOutputT(core::Tensor dense_weight, core::Tensor dense_bias,
+              core::Tensor layer_norm_weight, core::Tensor layer_norm_bias)
       : dense_weight_(std::move(dense_weight)),
         dense_bias_(std::move(dense_bias)),
         layer_norm_weight_(std::move(layer_norm_weight)),
@@ -40,6 +41,8 @@ class BertOutput {
   core::Tensor layer_norm_weight_;
   core::Tensor layer_norm_bias_;
 };
+
+typedef BertOutputT<float> BertOutput;
 
 }  // namespace layers
 }  // namespace turbo_transformers

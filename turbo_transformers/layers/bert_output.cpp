@@ -26,7 +26,8 @@
 namespace turbo_transformers {
 namespace layers {
 
-void BertOutput::operator()(const core::Tensor &hidden_states,
+template <typename DType>
+void BertOutputT<DType>::operator()(const core::Tensor &hidden_states,
                             const core::Tensor &input_tensor,
                             core::Tensor *output_tensor) const {
 #ifdef WITH_PERFTOOLS
@@ -38,7 +39,7 @@ void BertOutput::operator()(const core::Tensor &hidden_states,
                 true,
                 "BertOutput: The input_tensor and hidden_states should have "
                 "the same device type and device id.");
-  output_tensor->Reshape<float>(
+  output_tensor->Reshape<DType>(
       {hidden_states.shape(0), hidden_states.shape(1), dense_weight_.shape(1)},
       hidden_states.device_type(), hidden_states.device_id(),
       "BERTEmbedding/Reshape");
@@ -46,7 +47,7 @@ void BertOutput::operator()(const core::Tensor &hidden_states,
   //      "BertOutput/Reshape");
   kernels::MatMul(hidden_states, false, dense_weight_, false, 1.0,
                   output_tensor, 0.0, "BertOutput/MatMul");
-  kernels::AddBiasLayerNorm<float>(
+  kernels::AddBiasLayerNorm<DType>(
       input_tensor, dense_bias_, layer_norm_weight_, layer_norm_bias_,
       output_tensor, 1e-12, "BertOutput/AddBiasLayerNorm");
 #ifdef WITH_PERFTOOLS
@@ -54,7 +55,8 @@ void BertOutput::operator()(const core::Tensor &hidden_states,
 #endif
 }
 
-void BertOutput::EnforceShapeAndType() const {
+template <typename DType>
+void BertOutputT<DType>::EnforceShapeAndType() const {
   if (loguru::current_verbosity_cutoff() >= 3) {
     std::stringstream ss;
     ss << "<<<<<<<< dense_weight_ <<<<<<<<<<";
@@ -68,6 +70,8 @@ void BertOutput::EnforceShapeAndType() const {
     LOG_S(3) << ss.str();
   }
 }
+
+template class BertOutputT<float>;
 
 }  // namespace layers
 }  // namespace turbo_transformers
