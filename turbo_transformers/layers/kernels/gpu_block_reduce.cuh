@@ -13,6 +13,7 @@
 
 #pragma once
 #include <cuda_runtime.h>
+#include "turbo_transformers/core/half.h"
 #include "turbo_transformers/layers/types.h"
 #include <algorithm>
 
@@ -24,16 +25,16 @@ using ReduceType = types::ReduceType;
 
 #define FINAL_MASK 0xffffffff
 
-template <typename Type, Type t, int NumElem>
+template <ReduceType TypeVal, int NumElem, typename DType>
 __inline__ __device__ void blockReduce(float* val_list);
 
 // use template to make code more concise
-template <ReduceType TypeVal, int NumElem>
-__inline__ __device__ void warpReduce(float* val_list);
+template <ReduceType TypeVal, int NumElem, typename DType>
+__inline__ __device__ void warpReduce(DType* val_list);
 
 // static
 template <>
-__inline__ __device__ void warpReduce<ReduceType::kMax, 1>(float* val_list) {
+__inline__ __device__ void warpReduce<ReduceType::kMax, 1, float>(float* val_list) {
   *val_list = max(*val_list, __shfl_xor_sync(FINAL_MASK, *val_list, 16, 32));
   *val_list = max(*val_list, __shfl_xor_sync(FINAL_MASK, *val_list, 8, 32));
   *val_list = max(*val_list, __shfl_xor_sync(FINAL_MASK, *val_list, 4, 32));
@@ -42,7 +43,7 @@ __inline__ __device__ void warpReduce<ReduceType::kMax, 1>(float* val_list) {
 }
 
 template <>
-__inline__ __device__ void warpReduce<ReduceType::kMax, 2>(float* val_list) {
+__inline__ __device__ void warpReduce<ReduceType::kMax, 2, float>(float* val_list) {
   float val0_tmp, val1_tmp;
 #define WarpReduceMaxOneStep(a, b)                               \
   val0_tmp = __shfl_xor_sync(FINAL_MASK, *(val_list), a, b);     \
@@ -59,7 +60,7 @@ __inline__ __device__ void warpReduce<ReduceType::kMax, 2>(float* val_list) {
 }
 
 template <>
-__inline__ __device__ void warpReduce<ReduceType::kMax, 4>(float* val_list) {
+__inline__ __device__ void warpReduce<ReduceType::kMax, 4, float>(float* val_list) {
   float val0_tmp, val1_tmp, val2_tmp, val3_tmp;
 #define WarpReduceMaxOneStep(a, b)                               \
   val0_tmp = __shfl_xor_sync(FINAL_MASK, *(val_list + 0), a, b); \
@@ -80,7 +81,7 @@ __inline__ __device__ void warpReduce<ReduceType::kMax, 4>(float* val_list) {
 }
 
 template <>
-__inline__ __device__ void warpReduce<ReduceType::kSum, 1>(float* val_list) {
+__inline__ __device__ void warpReduce<ReduceType::kSum, 1, float>(float* val_list) {
   *val_list += __shfl_xor_sync(FINAL_MASK, *val_list, 16, 32);
   *val_list += __shfl_xor_sync(FINAL_MASK, *val_list, 8, 32);
   *val_list += __shfl_xor_sync(FINAL_MASK, *val_list, 4, 32);
@@ -95,7 +96,7 @@ __inline__ __device__ void warpReduce<ReduceType::kSum, 1>(float* val_list) {
  */
 
 template <>
-__inline__ __device__ void warpReduce<ReduceType::kSum, 2>(float* val_list) {
+__inline__ __device__ void warpReduce<ReduceType::kSum, 2, float>(float* val_list) {
   float val0_tmp, val1_tmp;
 #define WarpReduceSumOneStep(a, b)                               \
   val0_tmp = __shfl_xor_sync(FINAL_MASK, *(val_list + 0), a, b); \
@@ -113,7 +114,25 @@ __inline__ __device__ void warpReduce<ReduceType::kSum, 2>(float* val_list) {
 }
 
 template <>
-__inline__ __device__ void warpReduce<ReduceType::kSum, 4>(float* val_list) {
+__inline__ __device__ void warpReduce<ReduceType::kSum, 2, core::Half>(core::Half* val_list) {
+  core::Half val0_tmp, val1_tmp;
+#define WarpReduceSumOneStep(a, b)                               \
+  val0_tmp = __shfl_xor_sync(FINAL_MASK, *(val_list + 0), a, b); \
+  val1_tmp = __shfl_xor_sync(FINAL_MASK, *(val_list + 1), a, b); \
+  *(val_list + 0) += val0_tmp;                                   \
+  *(val_list + 1) += val1_tmp
+
+  WarpReduceSumOneStep(16, 32);
+  WarpReduceSumOneStep(8, 32);
+  WarpReduceSumOneStep(4, 32);
+  WarpReduceSumOneStep(2, 32);
+  WarpReduceSumOneStep(1, 32);
+
+#undef WarpReduceSumOneStep
+}
+
+template <>
+__inline__ __device__ void warpReduce<ReduceType::kSum, 4, float>(float* val_list) {
   float val0_tmp, val1_tmp, val2_tmp, val3_tmp;
 #define WarpReduceSumOneStep(a, b)                               \
   val0_tmp = __shfl_xor_sync(FINAL_MASK, *(val_list + 0), a, b); \
@@ -133,10 +152,10 @@ __inline__ __device__ void warpReduce<ReduceType::kSum, 4>(float* val_list) {
 #undef WarpReduceSumOneStep
 }
 
-template <ReduceType TypeVal, int NumElem>
-__inline__ __device__ void blockReduce(float* val_list) {
+template <ReduceType TypeVal, int NumElem, typename DType>
+__inline__ __device__ void blockReduce(DType* val_list) {
   const int n = NumElem;
-  static __shared__ float shared[n][32];
+  static __shared__ DType shared[n][32];
   int lane_id = threadIdx.x & 0x1f;
   int wid = threadIdx.x >> 5;
 

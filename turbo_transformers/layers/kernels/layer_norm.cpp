@@ -14,6 +14,7 @@
 #include "turbo_transformers/layers/kernels/layer_norm.h"
 
 #include "common.h"
+#include "turbo_transformers/core/half.h"
 #include "turbo_transformers/layers/kernels/common.h"
 #ifdef TT_WITH_CUDA
 #include "turbo_transformers/core/cuda_device_context.h"
@@ -52,8 +53,8 @@ void LayerNorm(const core::Tensor& gamma, const core::Tensor& beta,
   if (out_tensor->device_type() == kDLCPU) {
 #pragma omp parallel for
     for (int64_t batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
-      T mean = 0;
-      T var = 0;
+      float mean = 0;
+      float var = 0;
       auto start_idx = batch_idx * feature_dim;
       auto end_idx = (batch_idx + 1) * feature_dim;
 #pragma omp simd reduction(+ : mean, var)
@@ -94,6 +95,11 @@ template void LayerNorm<float>(const core::Tensor& gamma,
                                const core::Tensor& beta,
                                core::Tensor* out_tensor, float eps,
                                const std::string name);
+
+template void LayerNorm<core::Half>(const core::Tensor& gamma,
+                                    const core::Tensor& beta,
+                                    core::Tensor* out_tensor, core::Half eps,
+                                    const std::string name);
 
 template <typename T>
 void AddBiasLayerNorm(const core::Tensor& input_tensor,
@@ -142,8 +148,8 @@ void AddBiasLayerNorm(const core::Tensor& input_tensor,
   if (input_tensor.device_type() == kDLCPU) {
 #pragma omp parallel for
     for (int64_t batch_idx = 0; batch_idx < m; ++batch_idx) {
-      T mean = 0;
-      T var = 0;
+      float mean = 0;
+      float var = 0;
 #pragma omp simd reduction(+ : mean, var)
       for (int64_t i = batch_idx * n; i < (batch_idx + 1) * n; i++) {
         int64_t j = i - batch_idx * n;
@@ -185,6 +191,13 @@ template void AddBiasLayerNorm<float>(const core::Tensor& input_tensor,
                                       const core::Tensor& beta_tensor,
                                       core::Tensor* out_tensor, float eps,
                                       const std::string name);
+
+template void AddBiasLayerNorm<core::Half>(const core::Tensor& input_tensor,
+                                           const core::Tensor& bias_tensor,
+                                           const core::Tensor& gamma_tensor,
+                                           const core::Tensor& beta_tensor,
+                                           core::Tensor* out_tensor, core::Half eps,
+                                           const std::string name);
 
 }  // namespace kernels
 }  // namespace layers

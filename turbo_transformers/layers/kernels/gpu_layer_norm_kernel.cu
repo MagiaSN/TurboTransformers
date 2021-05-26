@@ -15,6 +15,7 @@
 
 #include <numeric>
 
+#include "turbo_transformers/core/half.h"
 #include "turbo_transformers/layers/kernels/gpu_block_reduce.cuh"
 #include "turbo_transformers/layers/kernels/gpu_layer_norm_kernel.h"
 
@@ -22,28 +23,28 @@ namespace turbo_transformers {
 namespace layers {
 namespace kernels {
 
-template <bool AddBias>
+template <bool AddBias, typename T>
 static __global__ void layer_norm_kernel_32x_le_1024(
-    float* out, const float* input, const float* bias, const float* gamma,
-    const float* beta, int m, int n) {
+    T* out, const T* input, const T* bias, const T* gamma,
+    const T* beta, int m, int n) {
   int tid = threadIdx.x;
   int offset = blockIdx.x * n + tid;
-  __shared__ float s_mean;
-  __shared__ float s_variance;
+  __shared__ T s_mean;
+  __shared__ T s_variance;
 
-  float local_out = 0.0f;
+  T local_out = 0.0f;
   if (AddBias) {
     local_out = out[offset] + input[offset] + bias[tid];
   } else {
     local_out = out[offset];
   }
 
-  float sum_list[2] = {local_out, local_out * local_out};
+  T sum_list[2] = {local_out, local_out * local_out};
   blockReduce<ReduceType::kSum, 2>(sum_list);
 
   if (tid == 0) {
-    float mean = sum_list[0] / n;
-    float mean_2 = sum_list[1] / n;
+    T mean = sum_list[0] / n;
+    T mean_2 = sum_list[1] / n;
     s_mean = mean;
     s_variance = rsqrtf(mean_2 - mean * mean + 1e-6f);
   }
@@ -53,25 +54,25 @@ static __global__ void layer_norm_kernel_32x_le_1024(
 
 // TODO(jiaruifang) if the lowese dimension is not 32x and <= 1024,
 // implementation is not optimized
-template <bool AddBias>
-static __global__ void layer_norm_kernel(float* out, const float* input,
-                                         const float* bias, const float* gamma,
-                                         const float* beta, int m, int n) {
+template <bool AddBias, typename T>
+static __global__ void layer_norm_kernel(T* out, const T* input,
+                                         const T* bias, const T* gamma,
+                                         const T* beta, int m, int n) {
   int tid = threadIdx.x;
   int offset = blockIdx.x * n;
   int block_dim_x = blockDim.x;
-  __shared__ float s_mean;
-  __shared__ float s_variance;
+  __shared__ T s_mean;
+  __shared__ T s_variance;
 
   // local reduce
   int idx = tid;
-  float local_sum_out = 0.;
-  float local_sum_square_out = 0.;
+  T local_sum_out = 0.;
+  T local_sum_square_out = 0.;
 
   if (AddBias) {
     idx = tid;
     while (idx < n) {
-      float tmp = (bias[idx] + input[idx + offset] + out[idx + offset]);
+      T tmp = (bias[idx] + input[idx + offset] + out[idx + offset]);
       local_sum_out += tmp;
       local_sum_square_out += tmp * tmp;
       idx += block_dim_x;
@@ -79,7 +80,7 @@ static __global__ void layer_norm_kernel(float* out, const float* input,
   } else {
     idx = tid;
     while (idx < n) {
-      float tmp = out[idx + offset];
+      T tmp = out[idx + offset];
       local_sum_out += tmp;
       local_sum_square_out += tmp * tmp;
       idx += block_dim_x;
@@ -87,13 +88,13 @@ static __global__ void layer_norm_kernel(float* out, const float* input,
   }
 
   // remote reduce
-  float sum_list[2] = {local_sum_out, local_sum_square_out};
+  T sum_list[2] = {local_sum_out, local_sum_square_out};
 
   blockReduce<ReduceType::kSum, 2>(sum_list);
 
   if (tid == 0) {
-    float mean = sum_list[0] / n;
-    float mean_2 = sum_list[1] / n;
+    T mean = sum_list[0] / n;
+    T mean_2 = sum_list[1] / n;
     s_mean = mean;
     s_variance = rsqrtf(mean_2 - mean * mean + 1e-6f);
   }
@@ -133,14 +134,22 @@ void GPULayerNorm(T* out, const T* input, const T* bias, const T* gamma,
   }
 }
 
-template void GPULayerNorm<true>(float* out, const float* input,
-                                 const float* bias, const float* gamma,
-                                 const float* beta, int m, int n,
-                                 cudaStream_t stream);
-template void GPULayerNorm<false>(float* out, const float* input,
-                                  const float* bias, const float* gamma,
-                                  const float* beta, int m, int n,
-                                  cudaStream_t stream);
+template void GPULayerNorm<true, float>(float* out, const float* input,
+                                        const float* bias, const float* gamma,
+                                        const float* beta, int m, int n,
+                                        cudaStream_t stream);
+template void GPULayerNorm<false, float>(float* out, const float* input,
+                                         const float* bias, const float* gamma,
+                                         const float* beta, int m, int n,
+                                         cudaStream_t stream);
+template void GPULayerNorm<true, core::Half>(core::Half* out, const core::Half* input,
+                                             const core::Half* bias, const core::Half* gamma,
+                                             const core::Half* beta, int m, int n,
+                                             cudaStream_t stream);
+template void GPULayerNorm<false, core::Half>(core::Half* out, const core::Half* input,
+                                              const core::Half* bias, const core::Half* gamma,
+                                              const core::Half* beta, int m, int n,
+                                              cudaStream_t stream);
 }  // namespace kernels
 }  // namespace layers
 }  // namespace turbo_transformers
