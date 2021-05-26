@@ -20,11 +20,12 @@
 namespace turbo_transformers {
 namespace layers {
 
-class BERTEmbedding {
+template <typename DType>
+class BERTEmbeddingT {
  public:
-  BERTEmbedding(core::Tensor word_embeddings, core::Tensor position_embeddings,
-                core::Tensor token_type_embeddings,
-                core::Tensor layer_norm_weights, core::Tensor layer_norm_bias)
+  BERTEmbeddingT(core::Tensor word_embeddings, core::Tensor position_embeddings,
+                 core::Tensor token_type_embeddings,
+                 core::Tensor layer_norm_weights, core::Tensor layer_norm_bias)
       : word_embedings_(
             std::move(word_embeddings)),  // [vocab_size, hidden_size]
         position_embeddings_(std::move(
@@ -50,6 +51,8 @@ class BERTEmbedding {
   core::Tensor layer_norm_weights_;
   core::Tensor layer_norm_bias_;
 };
+
+typedef BERTEmbeddingT<float> BERTEmbedding;
 
 }  // namespace layers
 }  // namespace turbo_transformers

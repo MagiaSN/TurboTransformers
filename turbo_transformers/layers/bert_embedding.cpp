@@ -21,7 +21,8 @@
 namespace turbo_transformers {
 namespace layers {
 
-void BERTEmbedding::operator()(const core::Tensor &input_ids,
+template <typename DType>
+void BERTEmbeddingT<DType>::operator()(const core::Tensor &input_ids,
                                const core::Tensor &position_ids,
                                const core::Tensor &token_type_ids,
                                core::Tensor *output_tensor) const {
@@ -45,7 +46,7 @@ void BERTEmbedding::operator()(const core::Tensor &input_ids,
   auto hidden_size = word_embedings_.shape(1);
 
   TT_ENFORCE(output_tensor, "The output tensor should not be nullptr.");
-  output_tensor->Reshape<float>({batch_size, seq_length, hidden_size},
+  output_tensor->Reshape<DType>({batch_size, seq_length, hidden_size},
                                 input_ids.device_type(), input_ids.device_id(),
                                 "BERTEmbedding/Reshape");
   LOG_S(3) << "Look up word embedding";
@@ -60,10 +61,12 @@ void BERTEmbedding::operator()(const core::Tensor &input_ids,
   kernels::LookupEmbedding</*Add=*/true>(output_tensor, position_embeddings_,
                                          position_ids);
 
-  kernels::LayerNorm<float>(layer_norm_weights_, layer_norm_bias_,
+  kernels::LayerNorm<DType>(layer_norm_weights_, layer_norm_bias_,
                             output_tensor);
 }
-void BERTEmbedding::EnforceShapeAndType() const {
+
+template <typename DType>
+void BERTEmbeddingT<DType>::EnforceShapeAndType() const {
   if (loguru::current_verbosity_cutoff() >= 3) {
     std::ostringstream os;
     os << ">>>>> word_embedings_ <<<<<<<<" << std::endl;
@@ -79,5 +82,8 @@ void BERTEmbedding::EnforceShapeAndType() const {
     LOG_S(3) << os.str();
   }
 }
+
+template class BERTEmbeddingT<float>;
+
 }  // namespace layers
 }  // namespace turbo_transformers
