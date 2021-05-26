@@ -19,9 +19,10 @@
 namespace turbo_transformers {
 namespace layers {
 
-class BertPooler {
+template <typename DType>
+class BertPoolerT {
  public:
-  BertPooler(core::Tensor dense_weight, core::Tensor dense_bias)
+  BertPoolerT(core::Tensor dense_weight, core::Tensor dense_bias)
       : dense_weight_(std::move(dense_weight)),
         dense_bias_(std::move(dense_bias)) {
     EnforceShapeAndType();
@@ -34,6 +35,8 @@ class BertPooler {
   core::Tensor dense_weight_;
   core::Tensor dense_bias_;
 };
+
+typedef BertPoolerT<float> BertPooler;
 
 }  // namespace layers
 }  // namespace turbo_transformers

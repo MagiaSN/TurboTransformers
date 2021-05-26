@@ -22,21 +22,23 @@
 namespace turbo_transformers {
 namespace layers {
 
-void BertPooler::operator()(const core::Tensor& input_tensor,
+template <typename DType>
+void BertPoolerT<DType>::operator()(const core::Tensor& input_tensor,
                             core::Tensor* output_tensor) const {
   TT_ENFORCE_EQ(input_tensor.n_dim(), 2, "input's dim should be 2, not %d",
                 input_tensor.n_dim());
-  output_tensor->Reshape<float>({input_tensor.shape(0), dense_weight_.shape(0)},
+  output_tensor->Reshape<DType>({input_tensor.shape(0), dense_weight_.shape(0)},
                                 input_tensor.device_type(),
                                 input_tensor.device_id(), "BertPooler");
 
   kernels::MatMul(input_tensor, false, dense_weight_, false, 1.0, output_tensor,
                   0.0);
-  kernels::AddBiasAct<float, kernels::ActivationType::Tanh>(dense_bias_,
+  kernels::AddBiasAct<DType, kernels::ActivationType::Tanh>(dense_bias_,
                                                             output_tensor);
 }
 
-void BertPooler::EnforceShapeAndType() const {
+template <typename DType>
+void BertPoolerT<DType>::EnforceShapeAndType() const {
   TT_ENFORCE_EQ(dense_weight_.n_dim(), 2, "dense weight must be matrix");
   TT_ENFORCE_EQ(dense_bias_.n_dim(), 1, "dense bias must be vector");
   TT_ENFORCE_EQ(dense_weight_.shape(1), dense_bias_.shape(0),
@@ -52,6 +54,8 @@ void BertPooler::EnforceShapeAndType() const {
     LOG_S(3) << os.str();
   }
 }
+
+template class BertPoolerT<float>;
 
 }  // namespace layers
 }  // namespace turbo_transformers
