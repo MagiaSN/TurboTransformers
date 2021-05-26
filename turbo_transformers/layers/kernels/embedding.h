@@ -18,7 +18,7 @@ namespace turbo_transformers {
 namespace layers {
 namespace kernels {
 
-template <bool Add>
+template <bool Add, typename DType>
 void LookupEmbedding(core::Tensor *out_tensor,
                      const core::Tensor &embedding_table,
                      const core::Tensor &ids_tensor,

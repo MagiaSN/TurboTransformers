@@ -20,6 +20,7 @@
 #include <thrust/sequence.h>
 #include <thrust/transform.h>
 
+#include "turbo_transformers/core/half.h"
 #include "turbo_transformers/layers/kernels/gpu_utils.h"
 
 namespace turbo_transformers {
@@ -214,6 +215,12 @@ template void GPUConcat<float>(const float* t1, const float* t2,
                                const int64_t t1_mid_size,
                                const int64_t t2_mid_size, const int64_t low_dim,
                                cudaStream_t stream, float* out_data);
+
+template void GPUConcat<core::Half>(const core::Half* t1, const core::Half* t2,
+                                    const int64_t high_dim,
+                                    const int64_t t1_mid_size,
+                                    const int64_t t2_mid_size, const int64_t low_dim,
+                                    cudaStream_t stream, core::Half* out_data);
 
 }  // namespace kernels
 }  // namespace layers

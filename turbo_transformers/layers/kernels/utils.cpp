@@ -19,6 +19,7 @@
 
 #include "turbo_transformers/core/cuda_device_context.h"
 #include "turbo_transformers/core/cuda_enforce.cuh"
+#include "turbo_transformers/core/half.h"
 #include "turbo_transformers/layers/kernels/gpu_utils.h"
 #endif
 #ifdef WITH_PERFTOOLS
@@ -99,6 +100,10 @@ void Concat(const core::Tensor& t1, const core::Tensor& t2, size_t dim,
 template void Concat<float>(const core::Tensor& t1, const core::Tensor& t2,
                             size_t dim, core::Tensor* output,
                             const std::string name);
+
+template void Concat<core::Half>(const core::Tensor& t1, const core::Tensor& t2,
+                                 size_t dim, core::Tensor* output,
+                                 const std::string name);
 
 void AddBias(const core::Tensor& bias, core::Tensor* output,
              const std::string name) {

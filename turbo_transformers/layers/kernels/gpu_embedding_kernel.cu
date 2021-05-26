@@ -16,14 +16,24 @@
 #include <numeric>
 #include <stdexcept>
 
+#include "turbo_transformers/core/half.h"
 #include "turbo_transformers/layers/kernels/gpu_embedding_kernel.h"
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ > 300
+// NOTE: The overloaded function must be in global namespace
+static __device__ turbo_transformers::core::Half __ldg(const turbo_transformers::core::Half *p) {
+  const __half *half_p = reinterpret_cast<const __half *>(p);
+  __half value = __ldg(half_p);
+  return turbo_transformers::core::Half(value);
+}
+#endif
 
 namespace turbo_transformers {
 namespace layers {
 namespace kernels {
 
-template <bool IsAdd>
-static __global__ void lookup(float* dst, const float* embedding_table,
+template <bool IsAdd, typename DType>
+static __global__ void lookup(DType* dst, const DType* embedding_table,
                               const int64_t* ids, int64_t vocab_size) {
   int64_t id = ids[blockIdx.x];
   int hidden_idx = threadIdx.x;
@@ -34,9 +44,9 @@ static __global__ void lookup(float* dst, const float* embedding_table,
   }
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ > 300
-  float val = __ldg(&embedding_table[id * hidden_size + hidden_idx]);
+  DType val = __ldg(&embedding_table[id * hidden_size + hidden_idx]);
 #else
-  float val = embedding_table[id * hidden_size + hidden_idx];
+  DType val = embedding_table[id * hidden_size + hidden_idx];
 #endif
   if (IsAdd) {
     dst[blockIdx.x * hidden_size + hidden_idx] += val;
@@ -45,8 +55,8 @@ static __global__ void lookup(float* dst, const float* embedding_table,
   }
 }
 
-template <bool Add>
-void GPULookupKernel(float* dst, const float* embedding_table,
+template <bool Add, typename DType>
+void GPULookupKernel(DType* dst, const DType* embedding_table,
                      const int64_t* ids, int64_t vocab_size,
                      int64_t hidden_size, int64_t num_ids,
                      cudaStream_t stream) {
@@ -57,18 +67,26 @@ void GPULookupKernel(float* dst, const float* embedding_table,
         "GPULookupKernel currently does not support a hidden_size larger than "
         "1024");
   }
-  lookup<Add>
+  lookup<Add, DType>
       <<<grid, block, 0, stream>>>(dst, embedding_table, ids, vocab_size);
 }
 
-template void GPULookupKernel<true>(float* dst, const float* embedding_table,
-                                    const int64_t* ids, int64_t vocab_size,
-                                    int64_t hidden_size, int64_t num_ids,
-                                    cudaStream_t stream);
-template void GPULookupKernel<false>(float* dst, const float* embedding_table,
-                                     const int64_t* ids, int64_t vocab_size,
-                                     int64_t hidden_size, int64_t num_ids,
-                                     cudaStream_t stream);
+template void GPULookupKernel<true, float>(float* dst, const float* embedding_table,
+                                           const int64_t* ids, int64_t vocab_size,
+                                           int64_t hidden_size, int64_t num_ids,
+                                           cudaStream_t stream);
+template void GPULookupKernel<false, float>(float* dst, const float* embedding_table,
+                                            const int64_t* ids, int64_t vocab_size,
+                                            int64_t hidden_size, int64_t num_ids,
+                                            cudaStream_t stream);
+template void GPULookupKernel<true, core::Half>(core::Half* dst, const core::Half* embedding_table,
+                                                const int64_t* ids, int64_t vocab_size,
+                                                int64_t hidden_size, int64_t num_ids,
+                                                cudaStream_t stream);
+template void GPULookupKernel<false, core::Half>(core::Half* dst, const core::Half* embedding_table,
+                                                 const int64_t* ids, int64_t vocab_size,
+                                                 int64_t hidden_size, int64_t num_ids,
+                                                 cudaStream_t stream);
 }  // namespace kernels
 }  // namespace layers
 }  // namespace turbo_transformers

@@ -10,16 +10,15 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 // See the AUTHORS file for names of contributors.
+
 #pragma once
-#if defined(__CUDACC__)
-#define CUDA_HALF
-#include <cuda_fp16.h>
-#endif
+
 #include <fp16.h>
 
-#ifdef __CUDACC__
+#if defined(__CUDA_ARCH__)
 #define HOSTDEVICE __host__ __device__
 #define DEVICE __device__
+#include <cuda_fp16.h>
 #else
 #define HOSTDEVICE
 #define DEVICE
@@ -41,8 +40,8 @@ struct alignas(2) Half {
 
   ~Half() = default;
 
-  Half(float other) {
-#if defined(CUDA_HALF)
+  HOSTDEVICE Half(float other) {
+#if defined(__CUDA_ARCH__)
     half tmp = __float2half(other);
     x = *reinterpret_cast<uint16_t *>(&tmp);
 #else
@@ -50,25 +49,44 @@ struct alignas(2) Half {
 #endif
   }
 
-  template <class T>
-  Half(const T &other) : Half(static_cast<float>(other)) {}
+#if defined(__CUDA_ARCH__)
+  DEVICE Half(__half other) {
+    x = *reinterpret_cast<uint16_t *>(&other);
+  }
+#endif
 
-  inline operator float() const {
-#if defined(CUDA_HALF)
+  HOSTDEVICE Half &operator+=(const Half &other) {
+#if defined(__CUDA_ARCH__)
+    const __half a = *reinterpret_cast<const __half *>(x);
+    const __half b = *reinterpret_cast<const __half *>(other.x);
+    __half sum = __hadd(a, b);
+    x = *reinterpret_cast<uint16_t *>(&sum);
+#else
+    // Basically fp16 should only be used on GPU...
+    const float a = fp16_ieee_to_fp32_value(x);
+    const float b = fp16_ieee_to_fp32_value(other.x);
+    float sum = a + b;
+    x = fp16_ieee_from_fp32_value(sum);
+#endif
+    return *this;
+  }
+
+  inline HOSTDEVICE operator float() const {
+#if defined(__CUDA_ARCH__)
     return __half2float(x);
 #else
     return fp16_ieee_to_fp32_value(x);
 #endif
   }
-};
+};  // struct Half
 
-#ifdef CUDA_HALF
+#ifdef __CUDA_ARCH__
 DEVICE __half operator+(const __half &a, const __half &b) {
   return __hadd(a, b);
 }
 #endif
 
-#if defined(CUDA_HALF) && __CUDA_ARCH__ >= 600
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 600
 DEVICE __half2 operator+(const __half2 &a, const __half2 &b) {
   return __hadd2(a, b);
 }

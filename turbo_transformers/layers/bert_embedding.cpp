@@ -51,14 +51,14 @@ void BERTEmbeddingT<DType>::operator()(const core::Tensor &input_ids,
                                 "BERTEmbedding/Reshape");
   LOG_S(3) << "Look up word embedding";
 
-  kernels::LookupEmbedding</*Add=*/false>(output_tensor, word_embedings_,
+  kernels::LookupEmbedding</*Add=*/false, DType>(output_tensor, word_embedings_,
                                           input_ids);
 
   LOG_S(3) << "Look up token type embedding";
-  kernels::LookupEmbedding</*Add=*/true>(output_tensor, token_type_embeddings_,
+  kernels::LookupEmbedding</*Add=*/true, DType>(output_tensor, token_type_embeddings_,
                                          token_type_ids);
   LOG_S(3) << "Look up token position embedding";
-  kernels::LookupEmbedding</*Add=*/true>(output_tensor, position_embeddings_,
+  kernels::LookupEmbedding</*Add=*/true, DType>(output_tensor, position_embeddings_,
                                          position_ids);
 
   kernels::LayerNorm<DType>(layer_norm_weights_, layer_norm_bias_,

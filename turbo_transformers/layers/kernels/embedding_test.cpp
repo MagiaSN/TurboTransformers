@@ -46,14 +46,14 @@ TEST_CASE("embedding-gpu-test") {
                 {ids_length, hidden_size});
 
         {
-          LookupEmbedding<true>(&cpu_out, cpu_embedding_table, cpu_ids);
-          LookupEmbedding<true>(&gpu_out, gpu_embedding_table, gpu_ids);
+          LookupEmbedding<true, float>(&cpu_out, cpu_embedding_table, cpu_ids);
+          LookupEmbedding<true, float>(&gpu_out, gpu_embedding_table, gpu_ids);
         }
         REQUIRE(common::CheckResultOfCPUAndGPU<float>(cpu_out, gpu_out));
 
         {
-          LookupEmbedding<false>(&cpu_out, cpu_embedding_table, cpu_ids);
-          LookupEmbedding<false>(&gpu_out, gpu_embedding_table, gpu_ids);
+          LookupEmbedding<false, float>(&cpu_out, cpu_embedding_table, cpu_ids);
+          LookupEmbedding<false, float>(&gpu_out, gpu_embedding_table, gpu_ids);
         }
         REQUIRE(common::CheckResultOfCPUAndGPU<float>(cpu_out, gpu_out));
       }

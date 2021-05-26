@@ -13,6 +13,7 @@
 #include "turbo_transformers/layers/kernels/embedding.h"
 
 #include "common.h"
+#include "turbo_transformers/core/half.h"
 #ifdef TT_WITH_CUDA
 #include "turbo_transformers/core/cuda_device_context.h"
 #include "turbo_transformers/layers/kernels/gpu_embedding_kernel.h"
@@ -25,7 +26,7 @@ namespace turbo_transformers {
 namespace layers {
 namespace kernels {
 
-template <bool Add>
+template <bool Add, typename DType>
 void LookupEmbedding(core::Tensor *out_tensor,
                      const core::Tensor &embedding_table,
                      const core::Tensor &ids_tensor,
@@ -46,9 +47,9 @@ void LookupEmbedding(core::Tensor *out_tensor,
                 "The out_tensor and ids_tensor should have the same device "
                 "type and device id.");
 
-  const float *embedding = embedding_table.data<float>();
+  const DType *embedding = embedding_table.data<DType>();
   const int64_t *ids = ids_tensor.data<int64_t>();
-  auto *out = out_tensor->mutableData<float>();
+  auto *out = out_tensor->mutableData<DType>();
   auto num_ids = ids_tensor.numel();
   auto hidden_size = embedding_table.shape(1);
   auto vocab_size = embedding_table.shape(0);
@@ -71,8 +72,8 @@ void LookupEmbedding(core::Tensor *out_tensor,
   } else if (out_tensor->device_type() == kDLGPU) {
 #ifdef TT_WITH_CUDA
     auto &cuda_ctx = core::CUDADeviceContext::GetInstance();
-    GPULookupKernel<Add>(out, embedding, ids, vocab_size, hidden_size,
-                         num_ids, cuda_ctx.stream());
+    GPULookupKernel<Add, DType>(out, embedding, ids, vocab_size, hidden_size,
+                                num_ids, cuda_ctx.stream());
 #else
     TT_THROW("The current code is not compiled with CUDA.");
 #endif
@@ -84,15 +85,25 @@ void LookupEmbedding(core::Tensor *out_tensor,
 #endif
 }
 
-template void LookupEmbedding<true>(core::Tensor *out_tensor,
-                                    const core::Tensor &embedding_table,
-                                    const core::Tensor &ids_tensor,
-                                    const std::string name);
+template void LookupEmbedding<true, float>(core::Tensor *out_tensor,
+                                           const core::Tensor &embedding_table,
+                                           const core::Tensor &ids_tensor,
+                                           const std::string name);
 
-template void LookupEmbedding<false>(core::Tensor *out_tensor,
-                                     const core::Tensor &embedding_table,
-                                     const core::Tensor &ids_tensor,
-                                     const std::string name);
+template void LookupEmbedding<false, float>(core::Tensor *out_tensor,
+                                            const core::Tensor &embedding_table,
+                                            const core::Tensor &ids_tensor,
+                                            const std::string name);
+
+template void LookupEmbedding<true, core::Half>(core::Tensor *out_tensor,
+                                                const core::Tensor &embedding_table,
+                                                const core::Tensor &ids_tensor,
+                                                const std::string name);
+
+template void LookupEmbedding<false, core::Half>(core::Tensor *out_tensor,
+                                                 const core::Tensor &embedding_table,
+                                                 const core::Tensor &ids_tensor,
+                                                 const std::string name);
 
 }  // namespace kernels
 }  // namespace layers
