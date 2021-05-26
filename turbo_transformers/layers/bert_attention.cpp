@@ -38,7 +38,7 @@ void BertAttentionT<DType>::operator()(const core::Tensor& input_tensor,
   } else {
     attn_ptr = attn;
   }
-  MultiHeadedAttention::operator()(
+  MultiHeadedAttentionT<DType>::operator()(
       input_tensor, input_tensor, input_tensor, attention_mask, "self", output,
       attn_ptr, dummy, false /* pre_layernorm */, true /* post_layernorm */,
       false /* post_add_input */, is_trans_weight /* is_trans_weight */);
@@ -49,7 +49,7 @@ void BertAttentionT<DType>::operator()(const core::Tensor& input_tensor,
 
 template <typename DType>
 void BertAttentionT<DType>::EnforceShapeAndType() const {
-  MultiHeadedAttention::EnforceShapeAndType();
+  MultiHeadedAttentionT<DType>::EnforceShapeAndType();
 }
 
 template class BertAttentionT<float>;

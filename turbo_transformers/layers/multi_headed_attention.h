@@ -22,14 +22,15 @@
 namespace turbo_transformers {
 namespace layers {
 
-class MultiHeadedAttention {
+template <typename DType>
+class MultiHeadedAttentionT {
  public:
-  MultiHeadedAttention(core::Tensor k_weight, core::Tensor k_bias,
-                       core::Tensor v_weight, core::Tensor v_bias,
-                       core::Tensor q_weight, core::Tensor q_bias,
-                       core::Tensor dense_weight, core::Tensor dense_bias,
-                       core::Tensor qkv_weight, core::Tensor qkv_bias,
-                       int64_t num_attention_heads)
+  MultiHeadedAttentionT(core::Tensor k_weight, core::Tensor k_bias,
+                        core::Tensor v_weight, core::Tensor v_bias,
+                        core::Tensor q_weight, core::Tensor q_bias,
+                        core::Tensor dense_weight, core::Tensor dense_bias,
+                        core::Tensor qkv_weight, core::Tensor qkv_bias,
+                        int64_t num_attention_heads)
       : k_weight_(std::move(k_weight)),  //(768, 768)
         k_bias_(std::move(k_bias)),
         v_weight_(std::move(v_weight)),  //(768, 768)
@@ -46,14 +47,14 @@ class MultiHeadedAttention {
     EnforceShapeAndType();
   }
 
-  MultiHeadedAttention(core::Tensor k_weight, core::Tensor k_bias,
-                       core::Tensor v_weight, core::Tensor v_bias,
-                       core::Tensor q_weight, core::Tensor q_bias,
-                       core::Tensor dense_weight, core::Tensor dense_bias,
-                       core::Tensor qkv_weight, core::Tensor qkv_bias,
-                       core::Tensor layernorm_gamma,
-                       core::Tensor layernorm_beta,
-                       int64_t num_attention_heads)
+  MultiHeadedAttentionT(core::Tensor k_weight, core::Tensor k_bias,
+                        core::Tensor v_weight, core::Tensor v_bias,
+                        core::Tensor q_weight, core::Tensor q_bias,
+                        core::Tensor dense_weight, core::Tensor dense_bias,
+                        core::Tensor qkv_weight, core::Tensor qkv_bias,
+                        core::Tensor layernorm_gamma,
+                        core::Tensor layernorm_beta,
+                        int64_t num_attention_heads)
       : k_weight_(std::move(k_weight)),  //(768, 768)
         k_bias_(std::move(k_bias)),
         v_weight_(std::move(v_weight)),  //(768, 768)
@@ -74,8 +75,13 @@ class MultiHeadedAttention {
   void SetContextFlag(
       const std::unordered_map<std::string, core::Tensor*>& layer_cache) const;
 
-  template <bool is_self>
-  void FuseGemm012AddBIasTranspose(
+  void FuseGemm012AddBIasTransposeContext(
+      const core::Tensor& query_tensor, const core::Tensor& value_tensor,
+      const core::Tensor& key_tensor, bool pre_layernorm, bool is_trans_weight,
+      std::unordered_map<std::string, core::Tensor*>& layer_cache,
+      core::Tensor* q_out, core::Tensor* k_out, core::Tensor* v_out) const;
+
+  void FuseGemm012AddBIasTransposeSelf(
       const core::Tensor& query_tensor, const core::Tensor& value_tensor,
       const core::Tensor& key_tensor, bool pre_layernorm, bool is_trans_weight,
       std::unordered_map<std::string, core::Tensor*>& layer_cache,
@@ -127,6 +133,8 @@ class MultiHeadedAttention {
   mutable bool self_values_not_none_{false};
   mutable bool memory_not_none_{false};
 };
+
+typedef MultiHeadedAttentionT<float> MultiHeadedAttention;
 
 }  // namespace layers
 }  // namespace turbo_transformers
