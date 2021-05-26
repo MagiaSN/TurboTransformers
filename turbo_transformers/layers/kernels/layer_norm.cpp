@@ -53,24 +53,24 @@ void LayerNorm(const core::Tensor& gamma, const core::Tensor& beta,
   if (out_tensor->device_type() == kDLCPU) {
 #pragma omp parallel for
     for (int64_t batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
-      float mean = 0;
-      float var = 0;
+      float mean(0);
+      float var(0);
       auto start_idx = batch_idx * feature_dim;
       auto end_idx = (batch_idx + 1) * feature_dim;
 #pragma omp simd reduction(+ : mean, var)
       for (int64_t i = start_idx; i < end_idx; i++) {
-        mean += out[i];
-        var += out[i] * out[i];
+        mean += static_cast<float>(out[i]);
+        var += static_cast<float>(out[i] * out[i]);
       }
-      mean = mean / feature_dim;
-      var = var / feature_dim - mean * mean;
+      mean = mean / float(feature_dim);
+      var = var / float(feature_dim) - mean * mean;
 
-      var = 1.f / sqrtf(var + eps);
+      var = 1.f / sqrtf(var + static_cast<float>(eps));
 
 #pragma omp simd
       for (int64_t i = 0; i < feature_dim; ++i) {
         int64_t j = batch_idx * feature_dim + i;
-        out[j] = beta_ptr[i] + gamma_ptr[i] * var * (out[j] - mean);
+        out[j] = beta_ptr[i] + gamma_ptr[i] * T(var) * (out[j] - T(mean));
       }
     }
   } else if (out_tensor->device_type() == kDLGPU) {
@@ -148,24 +148,24 @@ void AddBiasLayerNorm(const core::Tensor& input_tensor,
   if (input_tensor.device_type() == kDLCPU) {
 #pragma omp parallel for
     for (int64_t batch_idx = 0; batch_idx < m; ++batch_idx) {
-      float mean = 0;
-      float var = 0;
+      float mean(0);
+      float var(0);
 #pragma omp simd reduction(+ : mean, var)
       for (int64_t i = batch_idx * n; i < (batch_idx + 1) * n; i++) {
         int64_t j = i - batch_idx * n;
         T t = out[i] = out[i] + input[i] + bias[j];
-        mean += t;
-        var += t * t;
+        mean += static_cast<float>(t);
+        var += static_cast<float>(t * t);
       }
-      mean = mean / n;
-      var = var / n - mean * mean;
+      mean = mean / float(n);
+      var = var / float(n) - mean * mean;
 
-      var = 1.f / sqrtf(var + eps);
+      var = 1.f / sqrtf(var + static_cast<float>(eps));
 
 #pragma omp simd
       for (int64_t i = 0; i < n; ++i) {
         int64_t j = batch_idx * n + i;
-        out[j] = beta[i] + gamma[i] * var * (out[j] - mean);
+        out[j] = beta[i] + gamma[i] * T(var) * (out[j] - T(mean));
       }
     }
   } else if (input_tensor.device_type() == kDLGPU) {

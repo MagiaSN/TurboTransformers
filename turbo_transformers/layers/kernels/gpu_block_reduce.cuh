@@ -12,10 +12,20 @@
 // See the AUTHORS file for names of contributors.
 
 #pragma once
+#include <cuda_fp16.h>
 #include <cuda_runtime.h>
 #include "turbo_transformers/core/half.h"
 #include "turbo_transformers/layers/types.h"
 #include <algorithm>
+
+__device__ turbo_transformers::core::Half __shfl_xor_sync(unsigned int mask,
+                                                          turbo_transformers::core::Half var,
+                                                          int laneMask,
+                                                          int width) {
+  __half half_var = *reinterpret_cast<__half *>(&var);
+  __half half_ret = __shfl_xor_sync(mask, half_var, laneMask, width);
+  return turbo_transformers::core::Half(half_ret);
+}
 
 namespace turbo_transformers {
 namespace layers {
@@ -177,7 +187,7 @@ __inline__ __device__ void blockReduce(DType* val_list) {
   } else {
 #pragma unroll
     for (int i = 0; i < n; ++i) {
-      *(val_list + i) = 0.f;
+      *(val_list + i) = DType(0.f);
     }
   }
   warpReduce<TypeVal, NumElem>(val_list);

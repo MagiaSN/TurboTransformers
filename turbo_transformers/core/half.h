@@ -40,7 +40,7 @@ struct alignas(2) Half {
 
   ~Half() = default;
 
-  HOSTDEVICE Half(float other) {
+  explicit HOSTDEVICE Half(float other) {
 #if defined(__CUDA_ARCH__)
     half tmp = __float2half(other);
     x = *reinterpret_cast<uint16_t *>(&tmp);
@@ -50,15 +50,15 @@ struct alignas(2) Half {
   }
 
 #if defined(__CUDA_ARCH__)
-  DEVICE Half(__half other) {
+  explicit DEVICE Half(__half other) {
     x = *reinterpret_cast<uint16_t *>(&other);
   }
 #endif
 
-  HOSTDEVICE Half &operator+=(const Half &other) {
+  inline HOSTDEVICE Half &operator+=(const Half &other) {
 #if defined(__CUDA_ARCH__)
-    const __half a = *reinterpret_cast<const __half *>(x);
-    const __half b = *reinterpret_cast<const __half *>(other.x);
+    const __half a = *reinterpret_cast<const __half *>(&x);
+    const __half b = *reinterpret_cast<const __half *>(&other.x);
     __half sum = __hadd(a, b);
     x = *reinterpret_cast<uint16_t *>(&sum);
 #else
@@ -71,7 +71,7 @@ struct alignas(2) Half {
     return *this;
   }
 
-  inline HOSTDEVICE operator float() const {
+  explicit inline HOSTDEVICE operator float() const {
 #if defined(__CUDA_ARCH__)
     return __half2float(x);
 #else
@@ -80,16 +80,57 @@ struct alignas(2) Half {
   }
 };  // struct Half
 
-#ifdef __CUDA_ARCH__
-DEVICE __half operator+(const __half &a, const __half &b) {
-  return __hadd(a, b);
-}
+inline HOSTDEVICE Half operator+(const Half &a, const Half &b) {
+#if defined(__CUDA_ARCH__)
+  const __half half_a = *reinterpret_cast<const __half *>(&a.x);
+  const __half half_b = *reinterpret_cast<const __half *>(&b.x);
+  __half sum = __hadd(half_a, half_b);
+#else
+  const float fp32_a = fp16_ieee_to_fp32_value(a.x);
+  const float fp32_b = fp16_ieee_to_fp32_value(b.x);
+  float sum = fp32_a + fp32_b;
 #endif
+  return Half(sum);
+}
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 600
-DEVICE __half2 operator+(const __half2 &a, const __half2 &b) {
-  return __hadd2(a, b);
-}
+inline HOSTDEVICE Half operator-(const Half &a, const Half &b) {
+#if defined(__CUDA_ARCH__)
+  const __half half_a = *reinterpret_cast<const __half *>(&a.x);
+  const __half half_b = *reinterpret_cast<const __half *>(&b.x);
+  __half sub = __hsub(half_a, half_b);
+#else
+  const float fp32_a = fp16_ieee_to_fp32_value(a.x);
+  const float fp32_b = fp16_ieee_to_fp32_value(b.x);
+  float sub = fp32_a - fp32_b;
 #endif
+  return Half(sub);
+}
+
+inline HOSTDEVICE Half operator*(const Half &a, const Half &b) {
+#if defined(__CUDA_ARCH__)
+  const __half half_a = *reinterpret_cast<const __half *>(&a.x);
+  const __half half_b = *reinterpret_cast<const __half *>(&b.x);
+  __half mul = __hmul(half_a, half_b);
+#else
+  const float fp32_a = fp16_ieee_to_fp32_value(a.x);
+  const float fp32_b = fp16_ieee_to_fp32_value(b.x);
+  float mul = fp32_a * fp32_b;
+#endif
+  return Half(mul);
+}
+
+inline HOSTDEVICE Half operator/(const Half &a, const Half &b) {
+#if defined(__CUDA_ARCH__)
+  const __half half_a = *reinterpret_cast<const __half *>(&a.x);
+  const __half half_b = *reinterpret_cast<const __half *>(&b.x);
+  __half div = __hdiv(half_a, half_b);
+#else
+  const float fp32_a = fp16_ieee_to_fp32_value(a.x);
+  const float fp32_b = fp16_ieee_to_fp32_value(b.x);
+  float div = fp32_a / fp32_b;
+#endif
+  return Half(div);
+}
+
 }  // namespace core
 }  // namespace turbo_transformers

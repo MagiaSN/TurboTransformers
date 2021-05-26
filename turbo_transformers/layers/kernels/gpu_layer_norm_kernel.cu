@@ -32,7 +32,7 @@ static __global__ void layer_norm_kernel_32x_le_1024(
   __shared__ T s_mean;
   __shared__ T s_variance;
 
-  T local_out = 0.0f;
+  T local_out(0.0f);
   if (AddBias) {
     local_out = out[offset] + input[offset] + bias[tid];
   } else {
@@ -43,10 +43,10 @@ static __global__ void layer_norm_kernel_32x_le_1024(
   blockReduce<ReduceType::kSum, 2>(sum_list);
 
   if (tid == 0) {
-    T mean = sum_list[0] / n;
-    T mean_2 = sum_list[1] / n;
+    T mean = sum_list[0] / T(n);
+    T mean_2 = sum_list[1] / T(n);
     s_mean = mean;
-    s_variance = rsqrtf(mean_2 - mean * mean + 1e-6f);
+    s_variance = T(rsqrtf(static_cast<float>(mean_2 - mean * mean + T(1e-6f))));
   }
   __syncthreads();
   out[offset] = (local_out - s_mean) * s_variance * gamma[tid] + beta[tid];
@@ -66,8 +66,8 @@ static __global__ void layer_norm_kernel(T* out, const T* input,
 
   // local reduce
   int idx = tid;
-  T local_sum_out = 0.;
-  T local_sum_square_out = 0.;
+  T local_sum_out(0.0f);
+  T local_sum_square_out(0.0f);
 
   if (AddBias) {
     idx = tid;
@@ -93,10 +93,10 @@ static __global__ void layer_norm_kernel(T* out, const T* input,
   blockReduce<ReduceType::kSum, 2>(sum_list);
 
   if (tid == 0) {
-    T mean = sum_list[0] / n;
-    T mean_2 = sum_list[1] / n;
+    T mean = sum_list[0] / T(n);
+    T mean_2 = sum_list[1] / T(n);
     s_mean = mean;
-    s_variance = rsqrtf(mean_2 - mean * mean + 1e-6f);
+    s_variance = T(rsqrtf(static_cast<float>(mean_2 - mean * mean + T(1e-6f))));
   }
   __syncthreads();
 
