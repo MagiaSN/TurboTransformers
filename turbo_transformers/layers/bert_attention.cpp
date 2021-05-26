@@ -26,7 +26,8 @@
 namespace turbo_transformers {
 namespace layers {
 
-void BertAttention::operator()(const core::Tensor& input_tensor,
+template <typename DType>
+void BertAttentionT<DType>::operator()(const core::Tensor& input_tensor,
                                const core::Tensor& attention_mask,
                                core::Tensor* output, core::Tensor* attn,
                                bool is_trans_weight) const {
@@ -46,9 +47,12 @@ void BertAttention::operator()(const core::Tensor& input_tensor,
   }
 }
 
-void BertAttention::EnforceShapeAndType() const {
+template <typename DType>
+void BertAttentionT<DType>::EnforceShapeAndType() const {
   MultiHeadedAttention::EnforceShapeAndType();
 }
+
+template class BertAttentionT<float>;
 
 }  // namespace layers
 }  // namespace turbo_transformers

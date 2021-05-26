@@ -22,12 +22,13 @@
 namespace turbo_transformers {
 namespace layers {
 
-class BertAttention : public MultiHeadedAttention {
+template <typename DType>
+class BertAttentionT : public MultiHeadedAttention {
  public:
-  BertAttention(core::Tensor qkv_weight, core::Tensor qkv_bias,
-                core::Tensor dense_weight, core::Tensor dense_bias,
-                core::Tensor layer_norm_weight, core::Tensor layer_norm_bias,
-                int64_t num_attention_heads)
+  BertAttentionT(core::Tensor qkv_weight, core::Tensor qkv_bias,
+                 core::Tensor dense_weight, core::Tensor dense_bias,
+                 core::Tensor layer_norm_weight, core::Tensor layer_norm_bias,
+                 int64_t num_attention_heads)
       : MultiHeadedAttention(
             std::move(core::Tensor(nullptr)), std::move(core::Tensor(nullptr)),
             std::move(core::Tensor(nullptr)), std::move(core::Tensor(nullptr)),
@@ -45,6 +46,8 @@ class BertAttention : public MultiHeadedAttention {
                   core::Tensor *attn = nullptr,
                   bool is_trans_weight = false) const;
 };
+
+typedef BertAttentionT<float> BertAttention;
 
 }  // namespace layers
 }  // namespace turbo_transformers
