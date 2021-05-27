@@ -70,8 +70,8 @@ void PositionwiseFeedForward::operator()(const core::Tensor& input_tensor,
       dense_bias_1_, &temp_tensor, "FFN/AddBiasAct");
   kernels::MatMul(temp_tensor, false, dense_weight_2_, is_trans_weight, 1.0,
                   &input_tensor_copy, 0.0, "FFN/gemm1");
-  kernels::AddInputBias(input_tensor, input_tensor_copy, dense_bias_2_,
-                        output_tensor, "FFN/AddInputBias");
+  kernels::AddInputBias<float>(input_tensor, input_tensor_copy, dense_bias_2_,
+                               output_tensor, "FFN/AddInputBias");
 }
 
 void PositionwiseFeedForward::EnforceShapeAndType() const {}
@@ -116,8 +116,8 @@ void DistrillFFN::operator()(const core::Tensor& input_tensor,
       dense_bias_1_, &temp_tensor, "FFN/AddBiasAct");
   kernels::MatMul(temp_tensor, false, dense_weight_2_, is_trans_weight, 1.0,
                   &input_tensor_copy, 0.0, "FFN/gemm1");
-  kernels::AddInputBias(input_tensor, input_tensor_copy, dense_bias_2_,
-                        output_tensor, "FFN/AddInputBias");
+  kernels::AddInputBias<float>(input_tensor, input_tensor_copy, dense_bias_2_,
+                               output_tensor, "FFN/AddInputBias");
   kernels::LayerNorm<float>(layer_norm_weight_, layer_norm_bias_, output_tensor,
                             1e-12, "FFN/LayerNorm");
 }

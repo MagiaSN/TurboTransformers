@@ -89,8 +89,8 @@ TEST_CASE("addbias-gpu-test") {
             batch_size, seq_length, hidden_size,
             [](core::Tensor& cpu_bias, core::Tensor& cpu_out,
                core::Tensor& gpu_bias, core::Tensor& gpu_out) {
-              AddBias(cpu_bias, &cpu_out);
-              AddBias(gpu_bias, &gpu_out);
+              AddBias<float>(cpu_bias, &cpu_out);
+              AddBias<float>(gpu_bias, &gpu_out);
               REQUIRE(common::CheckResultOfCPUAndGPU<float>(cpu_out, gpu_out));
             });
       }  // for
@@ -124,8 +124,8 @@ TEST_CASE("addinputbias-gpu-test") {
                core::Tensor& cpu_bias, core::Tensor& cpu_out,
                core::Tensor& gpu_input1, core::Tensor& gpu_input2,
                core::Tensor& gpu_bias, core::Tensor& gpu_out) {
-              AddInputBias(cpu_input1, cpu_input2, cpu_bias, &cpu_out);
-              AddInputBias(gpu_input1, gpu_input2, gpu_bias, &gpu_out);
+              AddInputBias<float>(cpu_input1, cpu_input2, cpu_bias, &cpu_out);
+              AddInputBias<float>(gpu_input1, gpu_input2, gpu_bias, &gpu_out);
               REQUIRE(common::CheckResultOfCPUAndGPU<float>(cpu_out, gpu_out));
             });
       }  // for

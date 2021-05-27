@@ -364,7 +364,7 @@ void MultiHeadedAttentionT<DType>::operator()(
   if (false == post_add_input) {
     if (false == post_layernorm) {
       //+bias
-      kernels::AddBias(dense_bias_, output, "AddBias");
+      kernels::AddBias<DType>(dense_bias_, output, "AddBias");
     } else {
       //+bias+layernorm
       kernels::AddBiasLayerNorm<DType>(query_tensor, dense_bias_,
@@ -374,7 +374,7 @@ void MultiHeadedAttentionT<DType>::operator()(
     }
   } else {
     //+input + bias
-    kernels::AddInputBias(*output, query_tensor, dense_bias_, output);
+    kernels::AddInputBias<float>(*output, query_tensor, dense_bias_, output);
   }
 #ifdef WITH_PERFTOOLS
   profile_ctx.end_profile("MultiHeadedAttention_" + attn_type, devtype_);

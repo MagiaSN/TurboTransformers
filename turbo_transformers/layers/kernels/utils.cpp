@@ -105,6 +105,7 @@ template void Concat<core::Half>(const core::Tensor& t1, const core::Tensor& t2,
                                  size_t dim, core::Tensor* output,
                                  const std::string name);
 
+template <typename T>
 void AddBias(const core::Tensor& bias, core::Tensor* output,
              const std::string name) {
 #ifdef WITH_PERFTOOLS
@@ -113,8 +114,8 @@ void AddBias(const core::Tensor& bias, core::Tensor* output,
 #endif
   auto dim1 = bias.shape(0);
   auto dim0 = output->numel() / dim1;
-  auto output_data = output->mutableData<float>();
-  const auto bias_data = bias.data<float>();
+  auto output_data = output->mutableData<T>();
+  const auto bias_data = bias.data<T>();
   if (bias.device_type() == kDLCPU && output->device_type() == kDLCPU) {
 #pragma omp parallel for
     for (int64_t i = 0; i < dim0; ++i) {
@@ -126,9 +127,9 @@ void AddBias(const core::Tensor& bias, core::Tensor* output,
   } else {
 #ifdef TT_WITH_CUDA
     core::CUDADeviceContext& cuda_ctx = core::CUDADeviceContext::GetInstance();
-    const float* dummy{nullptr};
-    kernels::GPUAddBias<false>(output_data, dummy, bias_data, dim0, dim1,
-                               cuda_ctx.stream(), output_data);
+    const T* dummy{nullptr};
+    kernels::GPUAddBias<false, T>(output_data, dummy, bias_data, dim0, dim1,
+                                  cuda_ctx.stream(), output_data);
 #endif
   }
 #ifdef WITH_PERFTOOLS
@@ -136,6 +137,13 @@ void AddBias(const core::Tensor& bias, core::Tensor* output,
 #endif
 }
 
+template void AddBias<float>(const core::Tensor& bias, core::Tensor* output,
+                             const std::string name);
+
+template void AddBias<core::Half>(const core::Tensor& bias, core::Tensor* output,
+                                  const std::string name);
+
+template <typename T>
 void AddInputBias(const core::Tensor& input1, const core::Tensor& input2,
                   const core::Tensor& bias, core::Tensor* output,
                   const std::string name) {
@@ -147,10 +155,10 @@ void AddInputBias(const core::Tensor& input1, const core::Tensor& input2,
                 "Tensor input1 and Tensor input2 should have the same numel.");
   auto dim1 = bias.shape(0);
   auto dim0 = output->numel() / dim1;
-  auto output_data = output->mutableData<float>();
-  const auto bias_data = bias.data<float>();
-  const auto input1_data = input1.data<float>();
-  const auto input2_data = input2.data<float>();
+  auto output_data = output->mutableData<T>();
+  const auto bias_data = bias.data<T>();
+  const auto input1_data = input1.data<T>();
+  const auto input2_data = input2.data<T>();
 
   if (input1.device_type() == kDLCPU && output->device_type() == kDLCPU) {
 #pragma omp parallel for
@@ -164,14 +172,22 @@ void AddInputBias(const core::Tensor& input1, const core::Tensor& input2,
   } else {
 #ifdef TT_WITH_CUDA
     core::CUDADeviceContext& cuda_ctx = core::CUDADeviceContext::GetInstance();
-    GPUAddBias<true>(input1_data, input2_data, bias_data, dim0, dim1,
-                     cuda_ctx.stream(), output_data);
+    GPUAddBias<true, T>(input1_data, input2_data, bias_data, dim0, dim1,
+                        cuda_ctx.stream(), output_data);
 #endif
   }
 #ifdef WITH_PERFTOOLS
   profile_ctx.end_profile(name, input1.device_type());
 #endif
 }
+
+template void AddInputBias<float>(const core::Tensor& input1, const core::Tensor& input2,
+                                  const core::Tensor& bias, core::Tensor* output,
+                                  const std::string name);
+
+template void AddInputBias<core::Half>(const core::Tensor& input1, const core::Tensor& input2,
+                                       const core::Tensor& bias, core::Tensor* output,
+                                       const std::string name);
 
 }  // namespace kernels
 }  // namespace layers

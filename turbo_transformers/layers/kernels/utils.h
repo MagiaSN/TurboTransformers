@@ -17,8 +17,10 @@ namespace turbo_transformers {
 namespace layers {
 namespace kernels {
 
+template <typename T>
 void AddBias(const core::Tensor& bias, core::Tensor* output,
              const std::string name = "AddBias");
+template <typename T>
 void AddInputBias(const core::Tensor& input1, const core::Tensor& input2,
                   const core::Tensor& bias, core::Tensor* output,
                   const std::string name = "AddInputBias");

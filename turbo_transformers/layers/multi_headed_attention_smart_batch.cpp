@@ -402,7 +402,7 @@ void MultiHeadedAttentionSmartBatch::operator()(
   if (false == post_add_input) {
     if (false == post_layernorm) {
       //+bias
-      kernels::AddBias(dense_bias_, output, "AddBias");
+      kernels::AddBias<float>(dense_bias_, output, "AddBias");
     } else {
       //+bias+layernorm
       kernels::AddBiasLayerNorm<float>(query_tensor, dense_bias_,
@@ -412,7 +412,7 @@ void MultiHeadedAttentionSmartBatch::operator()(
     }
   } else {
     //+input + bias
-    kernels::AddInputBias(*output, query_tensor, dense_bias_, output);
+    kernels::AddInputBias<float>(*output, query_tensor, dense_bias_, output);
   }
 #ifdef WITH_PERFTOOLS
   profile_ctx.end_profile("MultiHeadedAttentionSmartBatch_" + attn_type,

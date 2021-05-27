@@ -132,10 +132,10 @@ void GPUTransform(int64_t* src_data_ptr, float* dst_data_ptr,
 
 // TODO(jiaruifang) if the lowese dimension is not 32x and <= 1024,
 // implementation is not optimized
-template <bool AddInput>
-static __global__ void add_bias(const float* input1, const float* input2,
-                                const float* bias, int m, int n,
-                                float* output) {
+template <bool AddInput, typename T>
+static __global__ void add_bias(const T* input1, const T* input2,
+                                const T* bias, int m, int n,
+                                T* output) {
   int offset = blockIdx.x * n;
   int block_dim_x = blockDim.x;
 
@@ -160,16 +160,22 @@ void GPUAddBias(const T* input1, const T* input2, const T* bias, int64_t m,
   dim3 grid(m);
   int block_size = min(1024, (int)((n + 31) / 32 * 32));
   dim3 block(block_size);
-  add_bias<AddInput><<<grid, block, 0, stream>>>(
+  add_bias<AddInput, T><<<grid, block, 0, stream>>>(
       input1, input2, bias, m, n, output);  // m : high dim, n : low dim
 }
 
-template void GPUAddBias<true>(const float* input1, const float* input2,
-                               const float* bias, int64_t m, int64_t n,
-                               cudaStream_t stream, float* output);
-template void GPUAddBias<false>(const float* input1, const float* input2,
-                                const float* bias, int64_t m, int64_t n,
-                                cudaStream_t stream, float* output);
+template void GPUAddBias<true, float>(const float* input1, const float* input2,
+                                      const float* bias, int64_t m, int64_t n,
+                                      cudaStream_t stream, float* output);
+template void GPUAddBias<false, float>(const float* input1, const float* input2,
+                                       const float* bias, int64_t m, int64_t n,
+                                       cudaStream_t stream, float* output);
+template void GPUAddBias<true, core::Half>(const core::Half* input1, const core::Half* input2,
+                                           const core::Half* bias, int64_t m, int64_t n,
+                                           cudaStream_t stream, core::Half* output);
+template void GPUAddBias<false, core::Half>(const core::Half* input1, const core::Half* input2,
+                                            const core::Half* bias, int64_t m, int64_t n,
+                                            cudaStream_t stream, core::Half* output);
 
 template <typename Dtype>
 __global__ void concat_kernel(const Dtype* t1, const Dtype* t2,
